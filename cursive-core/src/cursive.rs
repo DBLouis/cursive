@@ -53,6 +53,9 @@ pub struct Cursive {
     // Handle auto-refresh when no event is received.
     fps: Option<NonZeroU32>,
     boring_frame_count: u32,
+
+    // Wait/notify mechanism.
+    condition: bool,
 }
 
 /// Identifies a screen in the cursive root.
@@ -118,6 +121,7 @@ impl Cursive {
             fps: None,
             boring_frame_count: 0,
             user_data: Box::new(()),
+            condition: false,
         };
         cursive.reset_default_callbacks();
 
@@ -1035,6 +1039,34 @@ impl Cursive {
     pub fn backend_name(&self) -> &str {
         self.backend.name()
     }
+
+    #[allow(missing_docs)]
+    pub fn notify(&mut self) {
+        self.condition = true;
+    }
+
+    #[allow(missing_docs)]
+    pub fn notify_with<T: Any>(&mut self, user_data: T) {
+        self.set_user_data(user_data);
+        self.notify();
+    }
+
+    #[allow(missing_docs)]
+    pub fn wait(&mut self) {
+        while self.is_running() {
+            if self.step() && self.condition {
+                break;
+            }
+        }
+        self.condition = false;
+    }
+
+    #[allow(missing_docs)]
+    pub fn wait_for<T: Any>(&mut self) -> Option<T> {
+        self.wait();
+        self.take_user_data()
+    }
+
 }
 
 impl Drop for Cursive {
